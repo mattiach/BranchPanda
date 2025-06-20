@@ -73,7 +73,7 @@ export async function initSidebar(container: HTMLElement) {
     const repoInfo = parseOwnerRepoBranchPath(window.location.href);
     if (!repoInfo) {
       sidebarRoot.textContent = "";
-      sidebarRoot.style.display = "hidden";
+      sidebarRoot.style.display = "none";
       return;
     }
 
@@ -102,7 +102,7 @@ export async function initSidebar(container: HTMLElement) {
       sidebarRoot.appendChild(ul);
     } catch (e) {
       console.error(e);
-      sidebarRoot.style.display = "hidden";
+      sidebarRoot.style.display = "none";
     }
   }
 
