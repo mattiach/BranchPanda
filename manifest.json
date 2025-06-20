@@ -1,0 +1,36 @@
+{
+  "manifest_version": 3,
+  "name": "BranchPanda",
+  "version": "1.0",
+  "description": "A Chrome extension that helps the navigation of GitHub repositories by providing a sidebar with repository structure.",
+  "permissions": [
+    "scripting",
+    "storage"
+  ],
+  "author": "mattiach",
+  "host_permissions": [
+    "https://github.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://github.com/*"
+      ],
+      "js": [
+        "content.js"
+      ]
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "sidebar.html",
+        "sidebar.js",
+        "sidebar.css"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ]
+}
