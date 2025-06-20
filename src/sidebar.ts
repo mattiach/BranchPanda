@@ -1,82 +1,120 @@
 import { RepoItem } from "./interfaces/const";
 
-const sidebarRoot = document.getElementById("sidebar-root")!;
+export async function initSidebar(container: HTMLElement) {
+  const sidebarRoot = container;
 
-async function fetchRepoContents(owner: string, repo: string, path = ""): Promise<RepoItem[]> {
-  const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
-  const res = await fetch(apiUrl);
-  if (!res.ok) throw new Error("Failed to fetch repo contents");
-  return res.json();
-}
+  function parseOwnerRepoBranchPath(url: string) {
+    try {
+      const u = new URL(url);
+      const parts = u.pathname.split("/").filter(Boolean);
 
-function createTreeItem(item: RepoItem, owner: string, repo: string): HTMLElement {
-  const li = document.createElement("li");
-  li.textContent = item.name;
-  li.style.cursor = "pointer";
+      if (parts.length < 2) return null;
 
-  if (item.type === "dir") {
-    li.style.fontWeight = "bold";
-    li.addEventListener("click", async () => {
-      if (li.querySelector("ul")) {
-        const ul = li.querySelector("ul")!;
-        ul.style.display = ul.style.display === "none" ? "block" : "none";
-      } else {
-        try {
-          const children = await fetchRepoContents(owner, repo, item.path);
-          const ul = document.createElement("ul");
-          children.forEach(child => ul.appendChild(createTreeItem(child, owner, repo)));
-          li.appendChild(ul);
-        } catch {
-          alert("Failed to load directory contents");
-        }
+      const owner = parts[0];
+      const repo = parts[1];
+      let branch = "main";
+      let path = "";
+
+      if (parts.length === 2) {
+        return { owner, repo, branch, path };
       }
-    });
-  } else {
-    li.addEventListener("click", () => {
-      window.open(`https://github.com/${owner}/${repo}/blob/main/${item.path}`, "_blank");
-    });
+
+      if (parts.length >= 4 && (parts[2] === "tree" || parts[2] === "blob")) {
+        branch = parts[3];
+        path = parts.slice(4).join("/");
+        return { owner, repo, branch, path };
+      }
+
+      return null;
+    } catch {
+      return null;
+    }
   }
 
-  return li;
+  async function fetchDefaultBranch(owner: string, repo: string): Promise<string> {
+    const apiUrl = `https://api.github.com/repos/${owner}/${repo}`;
+    const res = await fetch(apiUrl);
+    if (!res.ok) throw new Error("Failed to fetch repo info");
+    const repoInfo = await res.json();
+    return repoInfo.default_branch;
+  }
+
+  async function fetchRepoContents(owner: string, repo: string, path: string, branch: string): Promise<RepoItem[]> {
+    const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=${branch}`;
+    const res = await fetch(apiUrl);
+    if (!res.ok) throw new Error("Failed to fetch repo contents");
+    return res.json();
+  }
+
+  function createTreeItem(item: RepoItem, owner: string, repo: string, branch: string): HTMLElement {
+    const li = document.createElement("li");
+    li.textContent = item.name;
+    li.style.cursor = "pointer";
+
+    if (item.type === "dir") {
+      li.style.fontWeight = "bold";
+      li.addEventListener("click", () => {
+        if (window.top) {
+          window.top.location.href = `https://github.com/${owner}/${repo}/tree/${branch}/${item.path}`;
+        }
+      });
+    } else {
+      li.addEventListener("click", () => {
+        if (window.top) {
+          window.top.location.href = `https://github.com/${owner}/${repo}/blob/${branch}/${item.path}`;
+        }
+      });
+    }
+
+    return li;
+  }
+
+  async function refreshSidebar() {
+    const repoInfo = parseOwnerRepoBranchPath(window.location.href);
+    if (!repoInfo) {
+      sidebarRoot.textContent = "";
+      sidebarRoot.style.display = "hidden";
+      return;
+    }
+
+    sidebarRoot.textContent = "Loading repository...";
+
+    try {
+      if (!repoInfo.path) {
+        repoInfo.branch = await fetchDefaultBranch(repoInfo.owner, repoInfo.repo);
+      }
+
+      sidebarRoot.style.display = "block";
+
+      const contents = await fetchRepoContents(repoInfo.owner, repoInfo.repo, repoInfo.path, repoInfo.branch);
+
+      // hide the sidebar if there are no contents
+      if (!contents || contents.length === 0) {
+        sidebarRoot.textContent = "";
+        sidebarRoot.style.display = "none";
+        return;
+      }
+
+      sidebarRoot.style.display = "block";
+      sidebarRoot.textContent = "";
+      const ul = document.createElement("ul");
+      contents.forEach(item => ul.appendChild(createTreeItem(item, repoInfo.owner, repoInfo.repo, repoInfo.branch)));
+      sidebarRoot.appendChild(ul);
+    } catch (e) {
+      console.error(e);
+      sidebarRoot.style.display = "hidden";
+    }
+  }
+
+  let lastUrl = "";
+
+  async function pollUrlChange() {
+    if (window.location.href !== lastUrl) {
+      lastUrl = window.location.href;
+      await refreshSidebar();
+    }
+  }
+
+  await refreshSidebar();
+  setInterval(pollUrlChange, 1000);
 }
-
-function getPageUrl(): string | null {
-  const params = new URLSearchParams(window.location.search);
-  return params.get("pageUrl");
-}
-
-function parseOwnerRepoFromUrl(url: string): { owner: string; repo: string } | null {
-  try {
-    const u = new URL(url);
-    const match = u.pathname.match(/^\/([^/]+)\/([^/]+)/);
-    if (!match) return null;
-    return { owner: match[1], repo: match[2] };
-  } catch {
-    return null;
-  }
-}
-
-async function init() {
-  const pageUrl = getPageUrl();
-  if (!pageUrl) {
-    sidebarRoot.textContent = "Missing page URL";
-    return;
-  }
-  const repoInfo = parseOwnerRepoFromUrl(pageUrl);
-  if (!repoInfo) {
-    return;
-  }
-
-  sidebarRoot.textContent = "Loading repository...";
-  try {
-    const rootContents = await fetchRepoContents(repoInfo.owner, repoInfo.repo);
-    sidebarRoot.textContent = "";
-    const ul = document.createElement("ul");
-    rootContents.forEach(item => ul.appendChild(createTreeItem(item, repoInfo.owner, repoInfo.repo)));
-    sidebarRoot.appendChild(ul);
-  } catch {
-    sidebarRoot.textContent = "Failed to load repository contents";
-  }
-}
-
-init();

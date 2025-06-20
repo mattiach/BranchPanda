@@ -1,13 +1,43 @@
+#sidebar-root {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+    Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+  font-size: 14px;
+  background-color: #0D1117;
+  height: 100%;
+  overflow-y: auto;
+  padding: 1em;
+  box-sizing: border-box;
+}
+
 #sidebar-root ul {
   list-style: none;
   padding-left: 1em;
+  margin: 0;
 }
 
 #sidebar-root li {
-  margin: 0.3em 0;
+  margin: 0.4em 0;
+  padding: 0.3em 0.5em;
+  border-radius: 4px;
+  cursor: pointer;
   user-select: none;
+  transition: background-color 0.2s ease;
 }
 
 #sidebar-root li:hover {
-  background-color: #ddd;
+  background-color: #0366d6;
+}
+
+#sidebar-root li:active {
+  background-color: #024ea2;
+}
+
+#sidebar-root li[style*="font-weight: bold"] {
+  font-weight: 600;
+}
+
+#sidebar-root li[style*="font-weight: bold"]:hover {
+  background-color: #e1e4e8;
+  color: #0366d6;
+  cursor: pointer;
 }
