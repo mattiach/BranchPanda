@@ -3,7 +3,7 @@ import { RepoInfo, RepoItem } from "./interfaces/const";
 export async function initSidebar(container: HTMLElement) {
   const sidebarRoot = container;
 
-  function parseOwnerRepoBranchPath(url: string) {
+  function parseOwnerRepoBranch(url: string) {
     try {
       const u = new URL(url);
       const parts = u.pathname.split("/").filter(Boolean);
@@ -13,19 +13,12 @@ export async function initSidebar(container: HTMLElement) {
       const owner = parts[0];
       const repo = parts[1];
       let branch = "main";
-      let path = '';
-
-      if (parts.length === 2) {
-        return { owner, repo, branch, path };
-      }
 
       if (parts.length >= 4 && (parts[2] === "tree" || parts[2] === "blob")) {
         branch = parts[3];
-        path = parts.slice(4).join("/");
-        return { owner, repo, branch, path };
       }
 
-      return null;
+      return { owner, repo, branch };
     } catch {
       return null;
     }
@@ -67,7 +60,6 @@ export async function initSidebar(container: HTMLElement) {
       li.appendChild(img);
       li.appendChild(document.createTextNode(item.name));
 
-      // Create a container UL for child items, initially hidden
       const childContainer = document.createElement("ul");
       childContainer.style.display = "none";
       childContainer.style.paddingLeft = "1em";
@@ -76,19 +68,16 @@ export async function initSidebar(container: HTMLElement) {
       let expanded = false;
 
       li.addEventListener("click", async (event) => {
-        event.stopPropagation();  // Prevent event bubbling up to parent folders
+        event.stopPropagation();
 
         if (expanded) {
-          // Collapse the folder
           childContainer.style.display = "none";
           expanded = false;
           img.style.transform = "rotate(0deg)";
         } else {
-          // Expand the folder
           img.style.transform = "rotate(90deg)";
 
           if (childContainer.childElementCount === 0) {
-            // Load contents if not already loaded
             try {
               const subRepoInfo = {
                 owner: repoInfo.owner,
@@ -110,7 +99,6 @@ export async function initSidebar(container: HTMLElement) {
         }
       });
     } else {
-      // File item - navigate to blob URL
       li.style.fontWeight = "normal";
       li.style.fontSize = "0.875rem";
       li.style.whiteSpace = "nowrap";
@@ -129,41 +117,55 @@ export async function initSidebar(container: HTMLElement) {
     return li;
   }
 
+  let currentRepoKey = '';
+
   async function refreshSidebar() {
-    const repoInfo = parseOwnerRepoBranchPath(window.location.href);
-    if (!repoInfo) {
-      sidebarRoot.textContent = '';
-      sidebarRoot.style.display = "none";
+    const parsed = parseOwnerRepoBranch(window.location.href);
+    if (!parsed) {
+      sidebarRoot.textContent = "Non sei in una repository.";
+      sidebarRoot.style.display = "block";
       return;
     }
 
-    sidebarRoot.textContent = "Loading repository...";
+    // Keep the path always at root
+    const repoInfo: RepoInfo = {
+      owner: parsed.owner,
+      repo: parsed.repo,
+      branch: parsed.branch,
+      path: "",
+    };
+
+    // Avoid reloading sidebar if still in the same repo
+    const newRepoKey = `${repoInfo.owner}/${repoInfo.repo}`;
+    if (newRepoKey === currentRepoKey) return;
+    currentRepoKey = newRepoKey;
+
+    sidebarRoot.style.display = "block";
+    sidebarRoot.textContent = "Caricamento repository...";
 
     try {
-      if (!repoInfo.path) {
+      // Get default branch if not specified
+      if (!repoInfo.branch) {
         repoInfo.branch = await fetchDefaultBranch(repoInfo.owner, repoInfo.repo);
       }
 
       const contents = await fetchRepoContents(repoInfo);
-
-      // hide the sidebar if there are no contents
       if (!contents || contents.length === 0) {
-        sidebarRoot.textContent = '';
-        sidebarRoot.style.display = "none";
+        sidebarRoot.textContent = "La repository è vuota.";
         return;
       }
 
-      sidebarRoot.textContent = '';
+      sidebarRoot.textContent = "";
       const ul = document.createElement("ul");
       contents.forEach(item => ul.appendChild(createTreeItem(item, repoInfo)));
       sidebarRoot.appendChild(ul);
     } catch (e) {
       console.error(e);
-      sidebarRoot.style.display = "none";
+      sidebarRoot.textContent = "Errore nel caricamento.";
     }
   }
 
-  let lastUrl = '';
+  let lastUrl = "";
 
   async function pollUrlChange() {
     if (window.location.href !== lastUrl) {

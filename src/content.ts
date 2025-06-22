@@ -1,18 +1,24 @@
-// Select GitHub's main content area – used to anchor the sidebar and match its height.
-const mainContent = document.querySelector(".application-main") as HTMLElement | null;
+let lastUrl = location.href;
 
-const injectSidebar = () => {
+function injectSidebar() {
+  if (document.getElementById("branchpanda-sidebar")) return;
+
+  const mainContent = document.querySelector(".application-main") as HTMLElement | null;
+  if (!mainContent) {
+    console.warn("Main content not found");
+    return;
+  }
+
   const sidebarContainer = document.createElement("div");
   sidebarContainer.id = "branchpanda-sidebar";
 
-  // Apply styles to the sidebar container
   Object.assign(sidebarContainer.style, {
     display: "none",
-    position: "absolute", // anchor to '.application-main'
+    position: "absolute",
     top: "0",
     left: "-12em",
     width: "13em",
-    height: "100%", // match the height of '.application-main', not the full viewport
+    height: "100%",
     padding: "1em 0.5em 0.5em 0.5em",
     border: "none",
     borderRight: ".5px solid #3d444d",
@@ -24,77 +30,59 @@ const injectSidebar = () => {
     listStyleType: "none",
   });
 
-  if (mainContent) {
-    // Set relative positioning so the sidebar (absolute) is anchored inside
-    mainContent.style.position = "relative";
+  mainContent.style.position = "relative";
+  mainContent.prepend(sidebarContainer);
+  mainContent.style.marginLeft = "0";
+  mainContent.style.transition = "margin-left 0.3s ease";
 
-    // Inject the sidebar into the DOM
-    mainContent.prepend(sidebarContainer);
-
-    // Adjust the main content margin when the sidebar is toggled
-    mainContent.style.marginLeft = "0";
-    mainContent.style.transition = "margin-left 0.3s ease";
-  } else {
-    console.warn("mainContent not found, appending sidebar to body.");
-    document.body.appendChild(sidebarContainer);
-  }
-
-  // Dynamically import and initialize the sidebar functionality
   import('./sidebar').then((module) => {
     module.initSidebar(sidebarContainer);
   });
-};
+}
 
 function insertCoolButton() {
-  let container = document.getElementById("repository-details-container");
-  const isHomePage = !!container;
-  if (!container) {
-    container = document.querySelector('#StickyHeader > div > div');
-  }
+  if (document.getElementById("branchpanda-button")) return;
+
+  let container = document.getElementById("repository-details-container") ||
+    document.querySelector('#StickyHeader > div > div');
   if (!container) {
     console.warn("Container for BranchPanda button not found.");
     return;
   }
 
-  function createButton() {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "btn-sm btn";
-    button.style.display = "flex";
-    button.style.alignItems = "center";
-    button.style.gap = "0.4em";
+  const button = document.createElement("button");
+  button.id = "branchpanda-button";
+  button.type = "button";
+  button.className = "btn-sm btn";
+  button.style.display = "flex";
+  button.style.alignItems = "center";
+  button.style.gap = "0.4em";
 
-    const img = document.createElement("img");
-    img.src = chrome.runtime.getURL("svg/panda.svg");
-    img.alt = "BranchPanda logo";
-    img.style.width = "1em";
-    img.style.height = "1em";
-    img.style.position = "relative";
-    img.style.top = "0.0625em";
+  const img = document.createElement("img");
+  img.src = chrome.runtime.getURL("svg/panda.svg");
+  img.alt = "BranchPanda logo";
+  img.style.width = "1em";
+  img.style.height = "1em";
+  img.style.position = "relative";
+  img.style.top = "0.0625em";
 
-    const span = document.createElement("span");
-    span.textContent = "BranchPanda";
+  const span = document.createElement("span");
+  span.textContent = "BranchPanda";
 
-    button.appendChild(img);
-    button.appendChild(span);
+  button.appendChild(img);
+  button.appendChild(span);
 
-    button.onclick = () => {
-      const sidebar = document.getElementById("branchpanda-sidebar");
-      if (!sidebar) return;
+  button.onclick = () => {
+    const sidebar = document.getElementById("branchpanda-sidebar");
+    const mainContent = document.querySelector(".application-main") as HTMLElement | null;
+    if (!sidebar || !mainContent) return;
 
-      const isHidden = sidebar.style.display === "none";
-      sidebar.style.display = isHidden ? "block" : "none";
+    const isHidden = sidebar.style.display === "none";
+    sidebar.style.display = isHidden ? "block" : "none";
+    mainContent.style.marginLeft = isHidden ? "12.5em" : "0";
+  };
 
-      if (mainContent) {
-        mainContent.style.marginLeft = isHidden ? "12.5em" : "0";
-      }
-    };
-
-    return button;
-  }
-
-  const button = createButton();
-
+  const isHomePage = !!document.getElementById("repository-details-container");
   if (isHomePage) {
     const ul = container.querySelector("ul.pagehead-actions");
     if (!ul) return;
@@ -106,5 +94,29 @@ function insertCoolButton() {
   }
 }
 
-injectSidebar();
-insertCoolButton();
+function initialize() {
+  injectSidebar();
+  insertCoolButton();
+}
+
+// ✅ Avvio iniziale
+initialize();
+
+// 🔁 Controlla i cambi URL ogni secondo (SPA navigation)
+setInterval(() => {
+  if (location.href !== lastUrl) {
+    lastUrl = location.href;
+
+    // Rimuovi sidebar e bottone precedenti
+    const sidebar = document.getElementById("branchpanda-sidebar");
+    if (sidebar) sidebar.remove();
+
+    const button = document.getElementById("branchpanda-button");
+    if (button) button.remove();
+
+    // Re-inietta dopo un piccolo delay per dare tempo al DOM di aggiornarsi
+    setTimeout(() => {
+      initialize();
+    }, 300);
+  }
+}, 1000);
