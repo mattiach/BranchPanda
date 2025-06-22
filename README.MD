@@ -34,11 +34,7 @@ Build the extension:
 
 <img src="https://i.postimg.cc/rpWvzJW2/2.png" alt="screenshot" width="600"/>
 
-After building, a dist folder will be generated in the root of your project.
-
-<img src="https://i.postimg.cc/NfMSRYT4/3.png" alt="screenshot" width="350" height="350" />
-
-Open Google Chrome or Brave, and load the entire __dist__ folder as an unpacked extension.
+After building, a dist folder will be generated in the root of your project. Open Google Chrome or Brave, and load the entire __dist__ folder as an unpacked extension.
 
 <img src="https://i.postimg.cc/8kWB3YGS/4.png" alt="screenshot" width="500" />
 
