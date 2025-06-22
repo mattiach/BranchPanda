@@ -1,3 +1,6 @@
+// Select GitHub's main content area – used to anchor the sidebar and match its height.
+const mainContent = document.querySelector(".application-main") as HTMLElement | null;
+
 const injectSidebar = () => {
   const sidebarContainer = document.createElement("div");
   sidebarContainer.id = "branchpanda-sidebar";
@@ -5,33 +8,41 @@ const injectSidebar = () => {
   // Apply styles to the sidebar container
   Object.assign(sidebarContainer.style, {
     display: "none",
-    position: "fixed",
+    position: "absolute", // anchor to '.application-main'
     top: "0",
-    left: "0",
-    padding: "0.5em",
-    width: "12.5em",
-    height: "100vh",
+    left: "-12em",
+    width: "13em",
+    height: "100%", // match the height of '.application-main', not the full viewport
+    padding: "1em 0.5em 0.5em 0.5em",
     border: "none",
-    borderRight: "1px solid #ccc",
+    borderRight: ".5px solid #3d444d",
     background: "#0D1117",
     color: "#ffffff",
-    zIndex: "9999",
+    zIndex: "10",
     overflowY: "auto",
     boxShadow: "2px 0 5px rgba(0,0,0,0.2)",
+    listStyleType: "none",
   });
 
-  document.body.appendChild(sidebarContainer);
+  if (mainContent) {
+    // Set relative positioning so the sidebar (absolute) is anchored inside
+    mainContent.style.position = "relative";
 
+    // Inject the sidebar into the DOM
+    mainContent.prepend(sidebarContainer);
+
+    // Adjust the main content margin when the sidebar is toggled
+    mainContent.style.marginLeft = "0";
+    mainContent.style.transition = "margin-left 0.3s ease";
+  } else {
+    console.warn("mainContent not found, appending sidebar to body.");
+    document.body.appendChild(sidebarContainer);
+  }
+
+  // Dynamically import and initialize the sidebar functionality
   import('./sidebar').then((module) => {
     module.initSidebar(sidebarContainer);
   });
-
-  // Adjust the main content margin when the sidebar is toggled
-  const mainContent = document.querySelector(".application-main") as HTMLElement | null;
-  if (mainContent) {
-    mainContent.style.marginLeft = "0";
-    mainContent.style.transition = "margin-left 0.3s ease";
-  }
 };
 
 function insertCoolButton() {
@@ -52,10 +63,10 @@ function insertCoolButton() {
   const img = document.createElement("img");
   img.src = chrome.runtime.getURL("svg/panda.svg");
   img.alt = "BranchPanda logo";
-  img.style.width = "16px";
-  img.style.height = "16px";
+  img.style.width = "1em";
+  img.style.height = "1em";
   img.style.position = "relative";
-  img.style.top = "1px";
+  img.style.top = "0.0625em";
 
   const span = document.createElement("span");
   span.textContent = "BranchPanda";
@@ -65,7 +76,6 @@ function insertCoolButton() {
 
   button.onclick = () => {
     const sidebar = document.getElementById("branchpanda-sidebar");
-    const mainContent = document.querySelector(".application-main") as HTMLElement | null;
     if (!sidebar) return;
 
     const isHidden = sidebar.style.display === "none";

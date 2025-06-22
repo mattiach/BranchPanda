@@ -37,8 +37,6 @@ export async function initSidebar(container: HTMLElement) {
     if (!res.ok) throw new Error("Failed to fetch repo info");
     const repoInfo = await res.json();
     return repoInfo.default_branch;
-
-
   }
 
   async function fetchRepoContents(repoInfo: RepoInfo): Promise<RepoItem[]> {
@@ -48,35 +46,77 @@ export async function initSidebar(container: HTMLElement) {
     return res.json();
   }
 
-  function createTreeItem(
-    item: RepoItem,
-    repoInfo: RepoInfo
-  ): HTMLElement {
+  function createTreeItem(item: RepoItem, repoInfo: RepoInfo): HTMLElement {
     const li = document.createElement("li");
     li.style.cursor = "pointer";
+    li.style.userSelect = "none";
+    li.style.listStyleType = "none";
 
     if (item.type === "dir") {
       li.style.fontWeight = "bold";
 
-      // Create an image element for the folder icon
       const img = document.createElement("img");
       img.src = chrome.runtime.getURL("svg/folder.svg");
       img.alt = "folder icon";
-      img.style.width = "16px";
-      img.style.height = "16px";
-      img.style.marginRight = "6px";
+      img.style.width = "1em";
+      img.style.height = "1em";
+      img.style.marginRight = "0.375em";
       img.style.verticalAlign = "middle";
+      img.style.transition = "transform 0.2s ease";
 
-      // Insert the image before the text
       li.appendChild(img);
       li.appendChild(document.createTextNode(item.name));
 
-      li.addEventListener("click", () => {
-        if (window.top) {
-          window.top.location.href = `https://github.com/${repoInfo.owner}/${repoInfo.repo}/tree/${repoInfo.branch}/${item.path}`;
+      // Create a container UL for child items, initially hidden
+      const childContainer = document.createElement("ul");
+      childContainer.style.display = "none";
+      childContainer.style.paddingLeft = "1em";
+      li.appendChild(childContainer);
+
+      let expanded = false;
+
+      li.addEventListener("click", async (event) => {
+        event.stopPropagation();  // Prevent event bubbling up to parent folders
+
+        if (expanded) {
+          // Collapse the folder
+          childContainer.style.display = "none";
+          expanded = false;
+          img.style.transform = "rotate(0deg)";
+        } else {
+          // Expand the folder
+          img.style.transform = "rotate(90deg)";
+
+          if (childContainer.childElementCount === 0) {
+            // Load contents if not already loaded
+            try {
+              const subRepoInfo = {
+                owner: repoInfo.owner,
+                repo: repoInfo.repo,
+                branch: repoInfo.branch,
+                path: item.path,
+              };
+              const subContents = await fetchRepoContents(subRepoInfo);
+              subContents.forEach(subItem => {
+                childContainer.appendChild(createTreeItem(subItem, subRepoInfo));
+              });
+            } catch (e) {
+              console.error("Failed to load folder contents", e);
+            }
+          }
+
+          childContainer.style.display = "block";
+          expanded = true;
         }
       });
     } else {
+      // File item - navigate to blob URL
+      li.style.fontWeight = "normal";
+      li.style.fontSize = "0.875rem";
+      li.style.whiteSpace = "nowrap";
+      li.style.overflow = "hidden";
+      li.style.textOverflow = "ellipsis";
+      li.style.maxWidth = "12em";
       li.textContent = item.name;
 
       li.addEventListener("click", () => {
@@ -104,8 +144,6 @@ export async function initSidebar(container: HTMLElement) {
         repoInfo.branch = await fetchDefaultBranch(repoInfo.owner, repoInfo.repo);
       }
 
-      sidebarRoot.style.display = "block";
-
       const contents = await fetchRepoContents(repoInfo);
 
       // hide the sidebar if there are no contents
@@ -115,7 +153,6 @@ export async function initSidebar(container: HTMLElement) {
         return;
       }
 
-      sidebarRoot.style.display = "block";
       sidebarRoot.textContent = '';
       const ul = document.createElement("ul");
       contents.forEach(item => ul.appendChild(createTreeItem(item, repoInfo)));
