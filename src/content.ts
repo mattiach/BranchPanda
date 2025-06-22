@@ -1,8 +1,14 @@
-const mainContent = document.querySelector(".application-main") as HTMLElement | null;
+let lastUrl = location.href;
 
-const SIDEBAR_STORAGE_KEY = "branchpanda-sidebar-visible";
+function injectSidebar() {
+  if (document.getElementById("branchpanda-sidebar")) return;
 
-const injectSidebar = () => {
+  const mainContent = document.querySelector(".application-main") as HTMLElement | null;
+  if (!mainContent) {
+    console.warn("Main content not found");
+    return;
+  }
+
   const sidebarContainer = document.createElement("div");
   sidebarContainer.id = "branchpanda-sidebar";
 
@@ -24,103 +30,59 @@ const injectSidebar = () => {
     listStyleType: "none",
   });
 
-  if (mainContent) {
-    mainContent.style.position = "relative";
-    mainContent.prepend(sidebarContainer);
-    mainContent.style.marginLeft = "0";
-    mainContent.style.transition = "margin-left 0.3s ease";
-  } else {
-    console.warn("mainContent not found, appending sidebar to body.");
-    document.body.appendChild(sidebarContainer);
-  }
+  mainContent.style.position = "relative";
+  mainContent.prepend(sidebarContainer);
+  mainContent.style.marginLeft = "0";
+  mainContent.style.transition = "margin-left 0.3s ease";
 
   import('./sidebar').then((module) => {
     module.initSidebar(sidebarContainer);
   });
-};
+}
 
 function insertCoolButton() {
-  let container = document.getElementById("repository-details-container");
-  const isHomePage = !!container;
+  if (document.getElementById("branchpanda-button")) return;
+
+  let container = document.getElementById("repository-details-container") ||
+    document.querySelector('#StickyHeader > div > div');
   if (!container) {
-    container = document.querySelector('#StickyHeader > div > div');
-  }
-
-  if (!container) {
-    console.warn("Container for BranchPanda button not found, inserting fallback button.");
-
-    const fallbackButton = createButton();
-    Object.assign(fallbackButton.style, {
-      position: "fixed",
-      top: "1em",
-      left: "1em",
-      zIndex: "1000",
-      backgroundColor: "#21262d",
-      border: "none",
-      color: "#fff",
-      fontSize: "1rem",
-      padding: "0.25em 0.5em",
-      borderRadius: "3px",
-      userSelect: "none",
-      cursor: "pointer",
-      display: "flex",
-      alignItems: "center",
-      gap: "0.4em",
-    });
-
-    document.body.appendChild(fallbackButton);
+    console.warn("Container for BranchPanda button not found.");
     return;
   }
 
-  function createButton() {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "btn-sm btn";
-    button.style.display = "flex";
-    button.style.alignItems = "center";
-    button.style.gap = "0.4em";
-    button.style.cursor = "pointer";
+  const button = document.createElement("button");
+  button.id = "branchpanda-button";
+  button.type = "button";
+  button.className = "btn-sm btn";
+  button.style.display = "flex";
+  button.style.alignItems = "center";
+  button.style.gap = "0.4em";
 
-    const img = document.createElement("img");
-    img.src = chrome.runtime.getURL("svg/panda.svg");
-    img.alt = "BranchPanda logo";
-    img.style.width = "1em";
-    img.style.height = "1em";
-    img.style.position = "relative";
-    img.style.top = "0.0625em";
+  const img = document.createElement("img");
+  img.src = chrome.runtime.getURL("svg/panda.svg");
+  img.alt = "BranchPanda logo";
+  img.style.width = "1em";
+  img.style.height = "1em";
+  img.style.position = "relative";
+  img.style.top = "0.0625em";
 
-    const span = document.createElement("span");
-    span.textContent = "BranchPanda";
+  const span = document.createElement("span");
+  span.textContent = "BranchPanda";
 
-    button.appendChild(img);
-    button.appendChild(span);
+  button.appendChild(img);
+  button.appendChild(span);
 
-    button.onclick = () => {
-      const sidebar = document.getElementById("branchpanda-sidebar");
-      if (!sidebar) return;
+  button.onclick = () => {
+    const sidebar = document.getElementById("branchpanda-sidebar");
+    const mainContent = document.querySelector(".application-main") as HTMLElement | null;
+    if (!sidebar || !mainContent) return;
 
-      const isHidden = sidebar.style.display === "none";
+    const isHidden = sidebar.style.display === "none";
+    sidebar.style.display = isHidden ? "block" : "none";
+    mainContent.style.marginLeft = isHidden ? "12.5em" : "0";
+  };
 
-      if (isHidden) {
-        sidebar.style.display = "block";
-        if (mainContent) {
-          mainContent.style.marginLeft = "12.5em";
-        }
-      } else {
-        sidebar.style.display = "none";
-        if (mainContent) {
-          mainContent.style.marginLeft = "0";
-        }
-      }
-
-      localStorage.setItem(SIDEBAR_STORAGE_KEY, isHidden ? "visible" : "hidden");
-    };
-
-    return button;
-  }
-
-  const button = createButton();
-
+  const isHomePage = !!document.getElementById("repository-details-container");
   if (isHomePage) {
     const ul = container.querySelector("ul.pagehead-actions");
     if (!ul) return;
@@ -132,31 +94,29 @@ function insertCoolButton() {
   }
 }
 
-injectSidebar();
-insertCoolButton();
+function initialize() {
+  injectSidebar();
+  insertCoolButton();
+}
 
-window.addEventListener("resize", () => {
-  const sidebar = document.getElementById("branchpanda-sidebar");
-  if (!sidebar || !mainContent) return;
-  sidebar.style.height = `${window.innerHeight}px`;
-});
+// ✅ Avvio iniziale
+initialize();
 
+// 🔁 Controlla i cambi URL ogni secondo (SPA navigation)
+setInterval(() => {
+  if (location.href !== lastUrl) {
+    lastUrl = location.href;
 
-window.addEventListener("load", () => {
-  const sidebar = document.getElementById("branchpanda-sidebar");
-  if (!sidebar) return;
+    // Rimuovi sidebar e bottone precedenti
+    const sidebar = document.getElementById("branchpanda-sidebar");
+    if (sidebar) sidebar.remove();
 
-  const storedPref = localStorage.getItem(SIDEBAR_STORAGE_KEY);
+    const button = document.getElementById("branchpanda-button");
+    if (button) button.remove();
 
-  if (storedPref === "hidden") {
-    sidebar.style.display = "none";
-    if (mainContent) {
-      mainContent.style.marginLeft = "0";
-    }
-  } else {
-    sidebar.style.display = "block";
-    if (mainContent) {
-      mainContent.style.marginLeft = "12.5em";
-    }
+    // Re-inietta dopo un piccolo delay per dare tempo al DOM di aggiornarsi
+    setTimeout(() => {
+      initialize();
+    }, 300);
   }
-});
+}, 1000);

@@ -3,7 +3,7 @@ import { RepoInfo, RepoItem } from "./interfaces/const";
 export async function initSidebar(container: HTMLElement) {
   const sidebarRoot = container;
 
-  function parseOwnerRepoBranchPath(url: string) {
+  function parseOwnerRepoBranch(url: string) {
     try {
       const u = new URL(url);
       const parts = u.pathname.split("/").filter(Boolean);
@@ -13,19 +13,12 @@ export async function initSidebar(container: HTMLElement) {
       const owner = parts[0];
       const repo = parts[1];
       let branch = "main";
-      let path = '';
-
-      if (parts.length === 2) {
-        return { owner, repo, branch, path };
-      }
 
       if (parts.length >= 4 && (parts[2] === "tree" || parts[2] === "blob")) {
         branch = parts[3];
-        path = parts.slice(4).join("/");
-        return { owner, repo, branch, path };
       }
 
-      return null;
+      return { owner, repo, branch };
     } catch {
       return null;
     }
@@ -46,7 +39,7 @@ export async function initSidebar(container: HTMLElement) {
     return res.json();
   }
 
-  async function createTreeItemWithExpand(item: RepoItem, repoInfo: RepoInfo, currentPathParts: string[]): Promise<HTMLElement> {
+  function createTreeItem(item: RepoItem, repoInfo: RepoInfo): HTMLElement {
     const li = document.createElement("li");
     li.style.cursor = "pointer";
     li.style.userSelect = "none";
@@ -68,12 +61,11 @@ export async function initSidebar(container: HTMLElement) {
       li.appendChild(document.createTextNode(item.name));
 
       const childContainer = document.createElement("ul");
+      childContainer.style.display = "none";
       childContainer.style.paddingLeft = "1em";
       li.appendChild(childContainer);
 
       let expanded = false;
-
-      const itemPathParts = item.path.split("/");
 
       li.addEventListener("click", async (event) => {
         event.stopPropagation();
@@ -84,6 +76,7 @@ export async function initSidebar(container: HTMLElement) {
           img.style.transform = "rotate(0deg)";
         } else {
           img.style.transform = "rotate(90deg)";
+
           if (childContainer.childElementCount === 0) {
             try {
               const subRepoInfo = {
@@ -93,41 +86,18 @@ export async function initSidebar(container: HTMLElement) {
                 path: item.path,
               };
               const subContents = await fetchRepoContents(subRepoInfo);
-              for (const subItem of subContents) {
-                const subChild = await createTreeItemWithExpand(subItem, subRepoInfo, currentPathParts);
-                childContainer.appendChild(subChild);
-              }
+              subContents.forEach(subItem => {
+                childContainer.appendChild(createTreeItem(subItem, subRepoInfo));
+              });
             } catch (e) {
               console.error("Failed to load folder contents", e);
             }
           }
+
           childContainer.style.display = "block";
           expanded = true;
         }
       });
-
-      if (currentPathParts.length > 0 && item.path === currentPathParts.slice(0, item.path.split("/").length).join("/")) {
-        img.style.transform = "rotate(90deg)";
-        expanded = true;
-        try {
-          const subRepoInfo = {
-            owner: repoInfo.owner,
-            repo: repoInfo.repo,
-            branch: repoInfo.branch,
-            path: item.path,
-          };
-          const subContents = await fetchRepoContents(subRepoInfo);
-          for (const subItem of subContents) {
-            const subChild = await createTreeItemWithExpand(subItem, subRepoInfo, currentPathParts);
-            childContainer.appendChild(subChild);
-          }
-          childContainer.style.display = "block";
-        } catch (e) {
-          console.error("Failed to load folder contents", e);
-        }
-      } else {
-        childContainer.style.display = "none";
-      }
     } else {
       li.style.fontWeight = "normal";
       li.style.fontSize = "0.875rem";
@@ -147,69 +117,55 @@ export async function initSidebar(container: HTMLElement) {
     return li;
   }
 
+  let currentRepoKey = '';
+
   async function refreshSidebar() {
-    let repoInfo = parseOwnerRepoBranchPath(window.location.href);
-    if (!repoInfo) {
-      const match = window.location.pathname.match(/^\/([^/]+)\/([^/]+)\/?$/);
-      if (match) {
-        const [, owner, repo] = match;
-        repoInfo = {
-          owner,
-          repo,
-          branch: '',
-          path: '',
-        };
-      } else {
-        sidebarRoot.textContent = '';
-        sidebarRoot.style.display = "none";
-        return;
-      }
+    const parsed = parseOwnerRepoBranch(window.location.href);
+    if (!parsed) {
+      sidebarRoot.textContent = "Non sei in una repository.";
+      sidebarRoot.style.display = "block";
+      return;
     }
 
-    sidebarRoot.textContent = "Loading repository...";
+    // Keep the path always at root
+    const repoInfo: RepoInfo = {
+      owner: parsed.owner,
+      repo: parsed.repo,
+      branch: parsed.branch,
+      path: "",
+    };
+
+    // Avoid reloading sidebar if still in the same repo
+    const newRepoKey = `${repoInfo.owner}/${repoInfo.repo}`;
+    if (newRepoKey === currentRepoKey) return;
+    currentRepoKey = newRepoKey;
+
+    sidebarRoot.style.display = "block";
+    sidebarRoot.textContent = "Caricamento repository...";
 
     try {
+      // Get default branch if not specified
       if (!repoInfo.branch) {
         repoInfo.branch = await fetchDefaultBranch(repoInfo.owner, repoInfo.repo);
       }
 
-      const rootRepoInfo = {
-        owner: repoInfo.owner,
-        repo: repoInfo.repo,
-        branch: repoInfo.branch,
-        path: '',
-      };
-
-      const contents = await fetchRepoContents(rootRepoInfo);
-
+      const contents = await fetchRepoContents(repoInfo);
       if (!contents || contents.length === 0) {
-        sidebarRoot.textContent = '';
-        sidebarRoot.style.display = "none";
+        sidebarRoot.textContent = "La repository è vuota.";
         return;
       }
 
-      sidebarRoot.textContent = '';
-
-      const currentPathParts = repoInfo.path ? repoInfo.path.split("/") : [];
-
+      sidebarRoot.textContent = "";
       const ul = document.createElement("ul");
-
-      for (const item of contents) {
-        const li = await createTreeItemWithExpand(item, rootRepoInfo, currentPathParts);
-        ul.appendChild(li);
-      }
-
-      sidebarRoot.innerHTML = '';
+      contents.forEach(item => ul.appendChild(createTreeItem(item, repoInfo)));
       sidebarRoot.appendChild(ul);
-      sidebarRoot.style.display = "block";
-
     } catch (e) {
       console.error(e);
-      sidebarRoot.style.display = "none";
+      sidebarRoot.textContent = "Errore nel caricamento.";
     }
   }
 
-  let lastUrl = '';
+  let lastUrl = "";
 
   async function pollUrlChange() {
     if (window.location.href !== lastUrl) {
@@ -219,6 +175,5 @@ export async function initSidebar(container: HTMLElement) {
   }
 
   await refreshSidebar();
-
   setInterval(pollUrlChange, 1000);
 }
