@@ -46,48 +46,64 @@ const injectSidebar = () => {
 };
 
 function insertCoolButton() {
-  const container = document.getElementById("repository-details-container");
-  if (!container) return;
+  let container = document.getElementById("repository-details-container");
+  const isHomePage = !!container;
+  if (!container) {
+    container = document.querySelector('#StickyHeader > div > div');
+  }
+  if (!container) {
+    console.warn("Container for BranchPanda button not found.");
+    return;
+  }
 
-  const ul = container.querySelector("ul.pagehead-actions");
-  if (!ul) return;
+  function createButton() {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "btn-sm btn";
+    button.style.display = "flex";
+    button.style.alignItems = "center";
+    button.style.gap = "0.4em";
 
-  const li = document.createElement("li");
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = "btn-sm btn";
-  button.style.display = "flex";
-  button.style.alignItems = "center";
-  button.style.gap = "0.4em";
+    const img = document.createElement("img");
+    img.src = chrome.runtime.getURL("svg/panda.svg");
+    img.alt = "BranchPanda logo";
+    img.style.width = "1em";
+    img.style.height = "1em";
+    img.style.position = "relative";
+    img.style.top = "0.0625em";
 
-  const img = document.createElement("img");
-  img.src = chrome.runtime.getURL("svg/panda.svg");
-  img.alt = "BranchPanda logo";
-  img.style.width = "1em";
-  img.style.height = "1em";
-  img.style.position = "relative";
-  img.style.top = "0.0625em";
+    const span = document.createElement("span");
+    span.textContent = "BranchPanda";
 
-  const span = document.createElement("span");
-  span.textContent = "BranchPanda";
+    button.appendChild(img);
+    button.appendChild(span);
 
-  button.appendChild(img);
-  button.appendChild(span);
+    button.onclick = () => {
+      const sidebar = document.getElementById("branchpanda-sidebar");
+      if (!sidebar) return;
 
-  button.onclick = () => {
-    const sidebar = document.getElementById("branchpanda-sidebar");
-    if (!sidebar) return;
+      const isHidden = sidebar.style.display === "none";
+      sidebar.style.display = isHidden ? "block" : "none";
 
-    const isHidden = sidebar.style.display === "none";
-    sidebar.style.display = isHidden ? "block" : "none";
+      if (mainContent) {
+        mainContent.style.marginLeft = isHidden ? "12.5em" : "0";
+      }
+    };
 
-    if (mainContent) {
-      mainContent.style.marginLeft = isHidden ? "12.5em" : "0";
-    }
-  };
+    return button;
+  }
 
-  li.appendChild(button);
-  ul.insertBefore(li, ul.firstChild);
+  const button = createButton();
+
+  if (isHomePage) {
+    const ul = container.querySelector("ul.pagehead-actions");
+    if (!ul) return;
+    const li = document.createElement("li");
+    li.appendChild(button);
+    ul.insertBefore(li, ul.firstChild);
+  } else {
+    container.appendChild(button);
+  }
 }
 
 injectSidebar();
