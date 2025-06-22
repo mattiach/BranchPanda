@@ -26,7 +26,7 @@
       "resources": [
         "sidebar.html",
         "sidebar.js",
-        "sidebar.css"
+        "svg/*"
       ],
       "matches": [
         "<all_urls>"

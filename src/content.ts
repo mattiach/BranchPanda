@@ -1,29 +1,38 @@
 const injectSidebar = () => {
   const sidebarContainer = document.createElement("div");
   sidebarContainer.id = "branchpanda-sidebar";
-  sidebarContainer.style.display = "none";
-  sidebarContainer.style.position = "fixed";
-  sidebarContainer.style.top = "0";
-  sidebarContainer.style.left = "0";
-  sidebarContainer.style.padding = "0.5em";
-  sidebarContainer.style.width = "12.5em"; // 200px
-  sidebarContainer.style.height = "100vh";
-  sidebarContainer.style.border = "1px solid #ccc";
-  sidebarContainer.style.background = "#0D1117";
-  sidebarContainer.style.color = "#ffffff";
-  sidebarContainer.style.zIndex = "9999";
-  sidebarContainer.style.overflowY = "auto";
-  sidebarContainer.style.boxShadow = "2px 0 5px rgba(0,0,0,0.2)";
-  sidebarContainer.textContent = "Loading sidebar...";
+
+  // Apply styles to the sidebar container
+  Object.assign(sidebarContainer.style, {
+    display: "none",
+    position: "fixed",
+    top: "0",
+    left: "0",
+    padding: "0.5em",
+    width: "12.5em",
+    height: "100vh",
+    border: "none",
+    borderRight: "1px solid #ccc",
+    background: "#0D1117",
+    color: "#ffffff",
+    zIndex: "9999",
+    overflowY: "auto",
+    boxShadow: "2px 0 5px rgba(0,0,0,0.2)",
+  });
 
   document.body.appendChild(sidebarContainer);
 
   import('./sidebar').then((module) => {
     module.initSidebar(sidebarContainer);
   });
-};
 
-injectSidebar();
+  // Adjust the main content margin when the sidebar is toggled
+  const mainContent = document.querySelector(".application-main") as HTMLElement | null;
+  if (mainContent) {
+    mainContent.style.marginLeft = "0";
+    mainContent.style.transition = "margin-left 0.3s ease";
+  }
+};
 
 function insertCoolButton() {
   const container = document.getElementById("repository-details-container");
@@ -40,25 +49,30 @@ function insertCoolButton() {
   button.style.alignItems = "center";
   button.style.gap = "0.4em";
 
-  // SVG + testo
-  button.innerHTML = `
-  <svg width="16" height="16" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
-    <path d="M62 13.802C62 7.283 56.623 2 50 2a12.005 12.005 0 0 0-10.41 5.962a29.531 29.531 0 0 0-7.716-1.044c-2.509 0-5.032.345-7.488 1.003A12.013 12.013 0 0 0 14.001 2C7.373 2 2 7.283 2 13.802c0 3.506 1.572 6.635 4.041 8.796C4.123 26.413 3 30.854 3 35.854c0 5.886 1.482 8.198 3.358 11.127c.648 1.012 1.317 2.057 2.013 3.377C12.152 57.538 21.159 61.999 31.875 62h.002c10.712 0 19.72-4.462 23.501-11.643c.736-1.396 1.465-2.491 2.168-3.549C59.4 44.027 61 41.625 61 35.857c0-4.994-1.131-9.431-3.061-13.243C60.42 20.453 62 17.316 62 13.802M31.95 59.118c-7.752 0-12.24-1.59-12.24-9.715c0-5.984 7.972-8.468 12.24-8.468c4.267 0 12.24 2.483 12.24 8.468c-.001 8.125-4.489 9.715-12.24 9.715m23.925-13.387c-.699 1.048-1.488 2.235-2.271 3.721c-2.201 4.178-6.41 7.335-11.764 9.071c2.447-1.63 3.85-4.433 3.85-9.12c0-7.026-8.949-9.943-13.74-9.943s-13.741 2.917-13.741 9.943c0 4.784 1.466 7.6 4.007 9.214c-5.499-1.714-9.828-4.908-12.07-9.165c-.734-1.394-1.458-2.523-2.096-3.52C6.279 43.168 5 41.172 5 35.854C5 18.973 18.664 8.885 31.874 8.885C45.207 8.885 59 18.974 59 35.857c0 5.181-1.311 7.15-3.125 9.874" />
-    <path d="M39.047 52.827c-.289 0-.57.102-1.039.271a16.36 16.36 0 0 1-5.074 1.029v-2.643c2.355-.204 6.853-1 6.853-2.677c0-2.481-3.531-2.96-7.886-2.96c-4.354 0-7.889.48-7.889 2.96c0 1.699 4.621 2.494 6.949 2.686v2.634c-2.536-.125-4.156-.702-5.071-1.029c-.466-.169-.749-.271-1.04-.271c-.246 0-.471.078-.617.215a.518.518 0 0 0-.174.394c0 1.396 3.761 2.669 7.891 2.669c4.125 0 7.884-1.272 7.886-2.665c0-.404-.395-.613-.789-.613" />
-    <path d="M38.219 27.424c-7.228 7.227 8.039 22.494 15.268 15.264c3.568-3.566 3.043-9.877-1.172-14.09c-4.219-4.217-10.528-4.744-14.096-1.174M49.695 33.9c0 2.762-2.238 5-5 5s-5-2.238-5-5a5 5 0 1 1 10 0" />
-    <circle cx="44.695" cy="33.9" r="2.5" />
-    <path d="M11.688 28.596c-4.215 4.217-4.741 10.523-1.172 14.094c7.226 7.229 22.492-8.037 15.264-15.268c-3.567-3.568-9.877-3.043-14.092 1.174M19.305 38.9c-2.762 0-5-2.238-5-5s2.238-5 5-5s5 2.238 5 5s-2.238 5-5 5" />
-    <circle cx="19.305" cy="33.9" r="2.5" />
-  </svg>
-  <span>BranchPanda</span>
-`;
+  const img = document.createElement("img");
+  img.src = chrome.runtime.getURL("svg/panda.svg");
+  img.alt = "BranchPanda logo";
+  img.style.width = "16px";
+  img.style.height = "16px";
+  img.style.position = "relative";
+  img.style.top = "1px";
 
-  // function to toggle the sidebar visibility
+  const span = document.createElement("span");
+  span.textContent = "BranchPanda";
+
+  button.appendChild(img);
+  button.appendChild(span);
+
   button.onclick = () => {
     const sidebar = document.getElementById("branchpanda-sidebar");
-    if (sidebar) {
-      const isVisible = sidebar.style.display !== "none";
-      sidebar.style.display = isVisible ? "none" : "block";
+    const mainContent = document.querySelector(".application-main") as HTMLElement | null;
+    if (!sidebar) return;
+
+    const isHidden = sidebar.style.display === "none";
+    sidebar.style.display = isHidden ? "block" : "none";
+
+    if (mainContent) {
+      mainContent.style.marginLeft = isHidden ? "12.5em" : "0";
     }
   };
 
@@ -66,4 +80,5 @@ function insertCoolButton() {
   ul.insertBefore(li, ul.firstChild);
 }
 
+injectSidebar();
 insertCoolButton();
