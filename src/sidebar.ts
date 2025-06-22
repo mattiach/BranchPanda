@@ -1,5 +1,7 @@
 import { RepoInfo, RepoItem } from "./interfaces/const";
 
+const mainContent = document.querySelector(".application-main") as HTMLElement | null;
+
 export async function initSidebar(container: HTMLElement) {
   const sidebarRoot = container;
 
@@ -122,8 +124,10 @@ export async function initSidebar(container: HTMLElement) {
   async function refreshSidebar() {
     const parsed = parseOwnerRepoBranch(window.location.href);
     if (!parsed) {
-      sidebarRoot.textContent = "Non sei in una repository.";
-      sidebarRoot.style.display = "block";
+      sidebarRoot.style.display = "none";
+      if (mainContent) {
+        mainContent.style.marginLeft = "0";
+      }
       return;
     }
 
@@ -141,7 +145,7 @@ export async function initSidebar(container: HTMLElement) {
     currentRepoKey = newRepoKey;
 
     sidebarRoot.style.display = "block";
-    sidebarRoot.textContent = "Caricamento repository...";
+    sidebarRoot.textContent = "Loading.. 🐼";
 
     try {
       // Get default branch if not specified
@@ -151,7 +155,7 @@ export async function initSidebar(container: HTMLElement) {
 
       const contents = await fetchRepoContents(repoInfo);
       if (!contents || contents.length === 0) {
-        sidebarRoot.textContent = "La repository è vuota.";
+        sidebarRoot.textContent = "The repository is empty 🐼";
         return;
       }
 
@@ -161,7 +165,7 @@ export async function initSidebar(container: HTMLElement) {
       sidebarRoot.appendChild(ul);
     } catch (e) {
       console.error(e);
-      sidebarRoot.textContent = "Errore nel caricamento.";
+      sidebarRoot.style.display = "none";
     }
   }
 

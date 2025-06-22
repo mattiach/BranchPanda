@@ -4,16 +4,12 @@ function injectSidebar() {
   if (document.getElementById("branchpanda-sidebar")) return;
 
   const mainContent = document.querySelector(".application-main") as HTMLElement | null;
-  if (!mainContent) {
-    console.warn("Main content not found");
-    return;
-  }
+  if (!mainContent) return;
 
   const sidebarContainer = document.createElement("div");
   sidebarContainer.id = "branchpanda-sidebar";
 
   Object.assign(sidebarContainer.style, {
-    display: "none",
     position: "absolute",
     top: "0",
     left: "-12em",
@@ -30,10 +26,29 @@ function injectSidebar() {
     listStyleType: "none",
   });
 
+  sidebarContainer.style.display = "none"; // default fallback
+
   mainContent.style.position = "relative";
   mainContent.prepend(sidebarContainer);
-  mainContent.style.marginLeft = "0";
   mainContent.style.transition = "margin-left 0.3s ease";
+
+  chrome.storage.local.get(["branchpandaSidebarVisible"], (result) => {
+    let visible = result.branchpandaSidebarVisible;
+
+    // If not set, default to true
+    if (typeof visible === "undefined") {
+      visible = true;
+      chrome.storage.local.set({ branchpandaSidebarVisible: true });
+    }
+
+    if (visible) {
+      sidebarContainer.style.display = "block";
+      mainContent.style.marginLeft = "12.5em";
+    } else {
+      sidebarContainer.style.display = "none";
+      mainContent.style.marginLeft = "0";
+    }
+  });
 
   import('./sidebar').then((module) => {
     module.initSidebar(sidebarContainer);
@@ -80,6 +95,8 @@ function insertCoolButton() {
     const isHidden = sidebar.style.display === "none";
     sidebar.style.display = isHidden ? "block" : "none";
     mainContent.style.marginLeft = isHidden ? "12.5em" : "0";
+
+    chrome.storage.local.set({ branchpandaSidebarVisible: isHidden });
   };
 
   const isHomePage = !!document.getElementById("repository-details-container");
@@ -99,22 +116,21 @@ function initialize() {
   insertCoolButton();
 }
 
-// ✅ Avvio iniziale
 initialize();
 
-// 🔁 Controlla i cambi URL ogni secondo (SPA navigation)
+// Check the URL every second
 setInterval(() => {
   if (location.href !== lastUrl) {
     lastUrl = location.href;
 
-    // Rimuovi sidebar e bottone precedenti
+    // Remove previous sidebar and button
     const sidebar = document.getElementById("branchpanda-sidebar");
     if (sidebar) sidebar.remove();
 
     const button = document.getElementById("branchpanda-button");
     if (button) button.remove();
 
-    // Re-inietta dopo un piccolo delay per dare tempo al DOM di aggiornarsi
+    // Reinitialize the sidebar and button after a short delay
     setTimeout(() => {
       initialize();
     }, 300);
