@@ -36,7 +36,7 @@ Build the extension:
 
 After building, a dist folder will be generated in the root of your project.
 
-<img src="https://i.postimg.cc/NfMSRYT4/3.png" alt="screenshot" width="350"/>
+<img src="https://i.postimg.cc/NfMSRYT4/3.png" alt="screenshot" width="350" height="350" />
 
 Open Google Chrome or Brave, and load the entire __dist__ folder as an unpacked extension.
 
