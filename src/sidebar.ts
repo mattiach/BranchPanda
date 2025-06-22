@@ -46,7 +46,7 @@ export async function initSidebar(container: HTMLElement) {
     return res.json();
   }
 
-  function createTreeItem(item: RepoItem, repoInfo: RepoInfo): HTMLElement {
+  async function createTreeItemWithExpand(item: RepoItem, repoInfo: RepoInfo, currentPathParts: string[]): Promise<HTMLElement> {
     const li = document.createElement("li");
     li.style.cursor = "pointer";
     li.style.userSelect = "none";
@@ -67,28 +67,24 @@ export async function initSidebar(container: HTMLElement) {
       li.appendChild(img);
       li.appendChild(document.createTextNode(item.name));
 
-      // Create a container UL for child items, initially hidden
       const childContainer = document.createElement("ul");
-      childContainer.style.display = "none";
       childContainer.style.paddingLeft = "1em";
       li.appendChild(childContainer);
 
       let expanded = false;
 
+      const itemPathParts = item.path.split("/");
+
       li.addEventListener("click", async (event) => {
-        event.stopPropagation();  // Prevent event bubbling up to parent folders
+        event.stopPropagation();
 
         if (expanded) {
-          // Collapse the folder
           childContainer.style.display = "none";
           expanded = false;
           img.style.transform = "rotate(0deg)";
         } else {
-          // Expand the folder
           img.style.transform = "rotate(90deg)";
-
           if (childContainer.childElementCount === 0) {
-            // Load contents if not already loaded
             try {
               const subRepoInfo = {
                 owner: repoInfo.owner,
@@ -97,20 +93,42 @@ export async function initSidebar(container: HTMLElement) {
                 path: item.path,
               };
               const subContents = await fetchRepoContents(subRepoInfo);
-              subContents.forEach(subItem => {
-                childContainer.appendChild(createTreeItem(subItem, subRepoInfo));
-              });
+              for (const subItem of subContents) {
+                const subChild = await createTreeItemWithExpand(subItem, subRepoInfo, currentPathParts);
+                childContainer.appendChild(subChild);
+              }
             } catch (e) {
               console.error("Failed to load folder contents", e);
             }
           }
-
           childContainer.style.display = "block";
           expanded = true;
         }
       });
+
+      if (currentPathParts.length > 0 && item.path === currentPathParts.slice(0, item.path.split("/").length).join("/")) {
+        img.style.transform = "rotate(90deg)";
+        expanded = true;
+        try {
+          const subRepoInfo = {
+            owner: repoInfo.owner,
+            repo: repoInfo.repo,
+            branch: repoInfo.branch,
+            path: item.path,
+          };
+          const subContents = await fetchRepoContents(subRepoInfo);
+          for (const subItem of subContents) {
+            const subChild = await createTreeItemWithExpand(subItem, subRepoInfo, currentPathParts);
+            childContainer.appendChild(subChild);
+          }
+          childContainer.style.display = "block";
+        } catch (e) {
+          console.error("Failed to load folder contents", e);
+        }
+      } else {
+        childContainer.style.display = "none";
+      }
     } else {
-      // File item - navigate to blob URL
       li.style.fontWeight = "normal";
       li.style.fontSize = "0.875rem";
       li.style.whiteSpace = "nowrap";
@@ -130,23 +148,40 @@ export async function initSidebar(container: HTMLElement) {
   }
 
   async function refreshSidebar() {
-    const repoInfo = parseOwnerRepoBranchPath(window.location.href);
+    let repoInfo = parseOwnerRepoBranchPath(window.location.href);
     if (!repoInfo) {
-      sidebarRoot.textContent = '';
-      sidebarRoot.style.display = "none";
-      return;
+      const match = window.location.pathname.match(/^\/([^/]+)\/([^/]+)\/?$/);
+      if (match) {
+        const [, owner, repo] = match;
+        repoInfo = {
+          owner,
+          repo,
+          branch: '',
+          path: '',
+        };
+      } else {
+        sidebarRoot.textContent = '';
+        sidebarRoot.style.display = "none";
+        return;
+      }
     }
 
     sidebarRoot.textContent = "Loading repository...";
 
     try {
-      if (!repoInfo.path) {
+      if (!repoInfo.branch) {
         repoInfo.branch = await fetchDefaultBranch(repoInfo.owner, repoInfo.repo);
       }
 
-      const contents = await fetchRepoContents(repoInfo);
+      const rootRepoInfo = {
+        owner: repoInfo.owner,
+        repo: repoInfo.repo,
+        branch: repoInfo.branch,
+        path: '',
+      };
 
-      // hide the sidebar if there are no contents
+      const contents = await fetchRepoContents(rootRepoInfo);
+
       if (!contents || contents.length === 0) {
         sidebarRoot.textContent = '';
         sidebarRoot.style.display = "none";
@@ -154,9 +189,20 @@ export async function initSidebar(container: HTMLElement) {
       }
 
       sidebarRoot.textContent = '';
+
+      const currentPathParts = repoInfo.path ? repoInfo.path.split("/") : [];
+
       const ul = document.createElement("ul");
-      contents.forEach(item => ul.appendChild(createTreeItem(item, repoInfo)));
+
+      for (const item of contents) {
+        const li = await createTreeItemWithExpand(item, rootRepoInfo, currentPathParts);
+        ul.appendChild(li);
+      }
+
+      sidebarRoot.innerHTML = '';
       sidebarRoot.appendChild(ul);
+      sidebarRoot.style.display = "block";
+
     } catch (e) {
       console.error(e);
       sidebarRoot.style.display = "none";
@@ -173,5 +219,6 @@ export async function initSidebar(container: HTMLElement) {
   }
 
   await refreshSidebar();
+
   setInterval(pollUrlChange, 1000);
 }

@@ -1,18 +1,18 @@
-// Select GitHub's main content area – used to anchor the sidebar and match its height.
 const mainContent = document.querySelector(".application-main") as HTMLElement | null;
+
+const SIDEBAR_STORAGE_KEY = "branchpanda-sidebar-visible";
 
 const injectSidebar = () => {
   const sidebarContainer = document.createElement("div");
   sidebarContainer.id = "branchpanda-sidebar";
 
-  // Apply styles to the sidebar container
   Object.assign(sidebarContainer.style, {
     display: "none",
-    position: "absolute", // anchor to '.application-main'
+    position: "absolute",
     top: "0",
     left: "-12em",
     width: "13em",
-    height: "100%", // match the height of '.application-main', not the full viewport
+    height: "100%",
     padding: "1em 0.5em 0.5em 0.5em",
     border: "none",
     borderRight: ".5px solid #3d444d",
@@ -25,13 +25,8 @@ const injectSidebar = () => {
   });
 
   if (mainContent) {
-    // Set relative positioning so the sidebar (absolute) is anchored inside
     mainContent.style.position = "relative";
-
-    // Inject the sidebar into the DOM
     mainContent.prepend(sidebarContainer);
-
-    // Adjust the main content margin when the sidebar is toggled
     mainContent.style.marginLeft = "0";
     mainContent.style.transition = "margin-left 0.3s ease";
   } else {
@@ -39,7 +34,6 @@ const injectSidebar = () => {
     document.body.appendChild(sidebarContainer);
   }
 
-  // Dynamically import and initialize the sidebar functionality
   import('./sidebar').then((module) => {
     module.initSidebar(sidebarContainer);
   });
@@ -51,8 +45,30 @@ function insertCoolButton() {
   if (!container) {
     container = document.querySelector('#StickyHeader > div > div');
   }
+
   if (!container) {
-    console.warn("Container for BranchPanda button not found.");
+    console.warn("Container for BranchPanda button not found, inserting fallback button.");
+
+    const fallbackButton = createButton();
+    Object.assign(fallbackButton.style, {
+      position: "fixed",
+      top: "1em",
+      left: "1em",
+      zIndex: "1000",
+      backgroundColor: "#21262d",
+      border: "none",
+      color: "#fff",
+      fontSize: "1rem",
+      padding: "0.25em 0.5em",
+      borderRadius: "3px",
+      userSelect: "none",
+      cursor: "pointer",
+      display: "flex",
+      alignItems: "center",
+      gap: "0.4em",
+    });
+
+    document.body.appendChild(fallbackButton);
     return;
   }
 
@@ -63,6 +79,7 @@ function insertCoolButton() {
     button.style.display = "flex";
     button.style.alignItems = "center";
     button.style.gap = "0.4em";
+    button.style.cursor = "pointer";
 
     const img = document.createElement("img");
     img.src = chrome.runtime.getURL("svg/panda.svg");
@@ -83,11 +100,20 @@ function insertCoolButton() {
       if (!sidebar) return;
 
       const isHidden = sidebar.style.display === "none";
-      sidebar.style.display = isHidden ? "block" : "none";
 
-      if (mainContent) {
-        mainContent.style.marginLeft = isHidden ? "12.5em" : "0";
+      if (isHidden) {
+        sidebar.style.display = "block";
+        if (mainContent) {
+          mainContent.style.marginLeft = "12.5em";
+        }
+      } else {
+        sidebar.style.display = "none";
+        if (mainContent) {
+          mainContent.style.marginLeft = "0";
+        }
       }
+
+      localStorage.setItem(SIDEBAR_STORAGE_KEY, isHidden ? "visible" : "hidden");
     };
 
     return button;
@@ -108,3 +134,29 @@ function insertCoolButton() {
 
 injectSidebar();
 insertCoolButton();
+
+window.addEventListener("resize", () => {
+  const sidebar = document.getElementById("branchpanda-sidebar");
+  if (!sidebar || !mainContent) return;
+  sidebar.style.height = `${window.innerHeight}px`;
+});
+
+
+window.addEventListener("load", () => {
+  const sidebar = document.getElementById("branchpanda-sidebar");
+  if (!sidebar) return;
+
+  const storedPref = localStorage.getItem(SIDEBAR_STORAGE_KEY);
+
+  if (storedPref === "hidden") {
+    sidebar.style.display = "none";
+    if (mainContent) {
+      mainContent.style.marginLeft = "0";
+    }
+  } else {
+    sidebar.style.display = "block";
+    if (mainContent) {
+      mainContent.style.marginLeft = "12.5em";
+    }
+  }
+});
