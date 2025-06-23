@@ -1,6 +1,10 @@
 let lastUrl = location.href;
 
 function injectSidebar() {
+  // Verify we are on a valid page
+  const pathParts = window.location.pathname.split("/").filter(Boolean);
+  if (pathParts.length < 2) return;
+
   if (document.getElementById("branchpanda-sidebar")) return;
 
   const mainContent = document.querySelector(".application-main") as HTMLElement | null;
