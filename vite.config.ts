@@ -20,7 +20,7 @@ export default defineConfig({
         { src: "manifest.json", dest: "." },
         { src: "src/sidebar.html", dest: "." },
         { src: "src/svg", dest: "." },
-        // { src: "icons", dest: "." }
+        { src: "src/img", dest: "." }
       ]
     })
   ]

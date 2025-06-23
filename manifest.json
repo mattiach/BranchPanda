@@ -21,12 +21,21 @@
       ]
     }
   ],
+  "icons": {
+    "16": "img/panda-logo.png",
+    "32": "img/panda-logo.png",
+    "48": "img/panda-logo.png",
+    "64": "img/panda-logo.png",
+    "96": "img/panda-logo.png",
+    "128": "img/panda-logo.png"
+  },
   "web_accessible_resources": [
     {
       "resources": [
         "sidebar.html",
         "sidebar.js",
-        "svg/*"
+        "svg/*",
+        "img/*"
       ],
       "matches": [
         "<all_urls>"
