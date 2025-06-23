@@ -4,7 +4,7 @@
 
 Easily navigate your repositories with a sidebar that displays the complete repo structure for quick access to files and folders. 
 
-<img src="https://i.postimg.cc/VNTh1Gk8/BANNER.png" alt="BranchPanda" width="300"/>
+<img src="https://i.postimg.cc/VNTh1Gk8/BANNER.png" alt="BranchPanda" width="600"/>
 
 ## Getting Started 🐼
 Clone the repository:
