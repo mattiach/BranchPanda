@@ -2,15 +2,24 @@
   "manifest_version": 3,
   "name": "BranchPanda",
   "version": "1.0",
-  "description": "A Chrome extension that helps the navigation of GitHub repositories by providing a sidebar with repository structure.",
+  "description": "A Chrome extension that helps the navigation of GitHub repositories by providing a sidebar with repository structure. Made by mattiach ❤️🐼",
+  "short_name": "BranchPanda",
   "permissions": [
     "scripting",
     "storage"
   ],
-  "author": "mattiach",
   "host_permissions": [
     "https://github.com/*"
   ],
+  "author": "mattiach",
+  "homepage_url": "https://github.com/mattiach/BranchPanda",
+  "action": {
+    "default_title": "BranchPanda 🐼",
+    "default_icon": {
+      "16": "img/panda-logo.png",
+      "32": "img/panda-logo.png"
+    }
+  },
   "content_scripts": [
     {
       "matches": [
