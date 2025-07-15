@@ -10,7 +10,8 @@ export default defineConfig({
         sidebar: "src/sidebar.ts"
       },
       output: {
-        entryFileNames: "[name].js"
+        entryFileNames: "[name].js",
+        manualChunks: () => 'main'
       }
     }
   },

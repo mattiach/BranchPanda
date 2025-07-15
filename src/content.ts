@@ -1,4 +1,5 @@
 let lastUrl = location.href;
+import { initSidebar } from './sidebar';
 
 function injectSidebar() {
   // Verify we are on a valid page
@@ -54,9 +55,7 @@ function injectSidebar() {
     }
   });
 
-  import('./sidebar').then((module) => {
-    module.initSidebar(sidebarContainer);
-  });
+  initSidebar(sidebarContainer);
 }
 
 function insertCoolButton() {
