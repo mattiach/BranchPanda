@@ -108,6 +108,7 @@ export async function initSidebar(container: HTMLElement) {
       li.style.textOverflow = "ellipsis";
       li.style.maxWidth = "12em";
       li.textContent = item.name;
+      li.title = item.name
 
       li.addEventListener("click", () => {
         if (window.top) {

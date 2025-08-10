@@ -20,7 +20,7 @@ function injectSidebar() {
     left: "-12em",
     width: "13em",
     height: "100%",
-    padding: "1em 0.5em 0.5em 0.5em",
+    padding: "1em",
     border: "none",
     borderRight: ".5px solid #3d444d",
     background: "#0D1117",
@@ -48,7 +48,7 @@ function injectSidebar() {
 
     if (visible) {
       sidebarContainer.style.display = "block";
-      mainContent.style.marginLeft = "12.5em";
+      mainContent.style.marginLeft = "14em";
     } else {
       sidebarContainer.style.display = "none";
       mainContent.style.marginLeft = "0";
